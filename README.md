@@ -56,3 +56,55 @@ git branch -M main
 git remote add origin <your-github-repo-url>
 git push -u origin main
 ```
+
+## Run As a Systemd Service
+
+Use systemd to start `testboard.py` automatically on boot and restart it if it crashes.
+
+### 1. Create the service unit
+
+```bash
+sudo tee /etc/systemd/system/testboardapp.service > /dev/null << 'EOF'
+[Unit]
+Description=Testboard Flask Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/testboardapp
+ExecStart=/home/pi/.local/bin/uv run /home/pi/testboardapp/testboard.py
+Restart=always
+RestartSec=5
+Environment=TESTBOARD_HOST=0.0.0.0
+Environment=TESTBOARD_PORT=5000
+Environment=LOG_LEVEL=INFO
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+### 2. Enable and start
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now testboardapp
+```
+
+### 3. Verify status and logs
+
+```bash
+sudo systemctl status testboardapp --no-pager
+journalctl -u testboardapp -f
+```
+
+### 4. Service management
+
+```bash
+sudo systemctl restart testboardapp
+sudo systemctl stop testboardapp
+sudo systemctl disable testboardapp
+```
