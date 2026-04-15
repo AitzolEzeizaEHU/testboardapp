@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="eu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry PIaren sarrera-irteerak</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Custom styling for matrix cells */
+        .matrix-cell {
+            width: 100%;
+            height: 60px; /* Smaller height */
+            font-size: 1.2rem; /* Smaller font size */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .pressed {
+            background-color: lightgreen; /* Light green for pressed */
+            color: #333;
+        }
+        .released {
+            background-color: lightgrey; /* Light grey for released */
+            color: #333;
+        }
+        .led-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: grey; /* Default off state */
+        }
+
+        .led-on {
+            background-color: rgb(42, 247, 42); /* ON state */
+            box-shadow: 0 0 10px green; /* Glow effect */
+        }
+
+        .led-off {
+            background-color: rgba(255, 0, 0, 0.151); /* OFF state */
+            box-shadow: 0 0 5px red; /* Subtle glow effect for off */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Raspberry PIaren sarrera-irteerak</h1>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h3>RGB LEDa</h3>
+                <button class="btn btn-success btn-block" onclick="toggleGPIO(12)">Toggle berdea GPIO 12</button>
+                <button class="btn btn-danger btn-block" onclick="toggleGPIO(13)">Toggle gorria GPIO 13</button>
+                <button class="btn btn-primary btn-block" onclick="toggleGPIO(24)">Toggle urdina GPIO 24</button>
+            </div>
+            <div class="col-md-6">
+                <h3>Botoiak</h3>
+                <p>Botoi beltza (GPIO 14): <span id="gpio14-state" class="led-indicator"></span></p>
+                <p>Botoi zuria (GPIO 15): <span id="gpio15-state" class="led-indicator"></span></p>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h3>Sarrera analogikoen balioak (Voltetan)</h3>
+                <p>AI0: <span id="analog0">0.00</span>V;  AI2: <span id="analog2">0.00</span>V</p>
+                <p>AI1: <span id="analog1">0.00</span>V;  AI3: <span id="analog3">0.00</span>V</p>
+                <h3>Borneroa (#3 GPIO 17, #4 GPIO 27)</h3>
+                <button class="btn btn-secondary btn-block" onclick="toggleGPIO(17)">Toggle GPIO 17</button>
+                <button class="btn btn-secondary btn-block" onclick="toggleGPIO(27)">Toggle GPIO 27</button>
+                <button class="btn btn-secondary btn-block" onclick="toggleGPIO(22)">Toggle GPIO 22</button>
+                <button class="btn btn-secondary btn-block" onclick="toggleGPIO(5)">Toggle GPIO 05</button>
+            </div>
+            <div class="col-md-6">
+                <h3>4x4 Botoi Matrizearen Egoera</h3>
+                <h5>PMOD KYPD</h5>
+                <div class="container">
+                    <!-- Button Matrix Output -->
+                    <div class="row">
+                        <div class="col-3 p-1"><div id="btn1" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn2" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn3" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn10" class="matrix-cell released">Released</div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-3 p-1"><div id="btn4" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn5" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn6" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn11" class="matrix-cell released">Released</div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-3 p-1"><div id="btn7" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn8" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn9" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn12" class="matrix-cell released">Released</div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-3 p-1"><div id="btn16" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn15" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn14" class="matrix-cell released">Released</div></div>
+                        <div class="col-3 p-1"><div id="btn13" class="matrix-cell released">Released</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="space"></div>
+    <script>
+        function toggleGPIO(gpio) {
+            fetch(`/toggle/${gpio}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert(`GPIO ${gpio} toggled to ${data.state}`);
+                });
+        }
+
+        function updateGPIOStates() {
+            fetch('/matrix_states')  // Endpoint in Flask to get the states of the 4x4 matrix buttons
+                .then(response => response.json())
+                .then(data => {
+                    for (let i = 1; i <= 16; i++) {
+                        let cell = document.getElementById(`btn${i}`);
+                        if (data[`btn${i}`] === "Pressed") {
+                            cell.classList.remove("released");
+                            cell.classList.add("pressed");
+                            cell.innerText = "Pressed";
+                        } else {
+                            cell.classList.remove("pressed");
+                            cell.classList.add("released");
+                            cell.innerText = "Released";
+                        }
+                    }
+                });
+                fetch('/states/14')
+        .then(response => response.json())
+        .then(data => {
+            const gpio14 = document.getElementById('gpio14-state');
+            console.log('GPIO 14 state:', data.state);  // Debugging log
+            if (data.state === "true") {
+                gpio14.classList.remove('led-off');
+                gpio14.classList.add('led-on');
+            } else {
+                gpio14.classList.remove('led-on');
+                gpio14.classList.add('led-off');
+            }
+        });
+
+    fetch('/states/15')
+        .then(response => response.json())
+        .then(data => {
+            const gpio15 = document.getElementById('gpio15-state');
+            if (data.state === "true") {
+                gpio15.classList.remove('led-off');
+                gpio15.classList.add('led-on');
+            } else {
+                gpio15.classList.remove('led-on');
+                gpio15.classList.add('led-off');
+            }
+        });
+    }
+
+        setInterval(updateGPIOStates, 1000);  // Update every second
+    </script>
+    <script>
+        function updateAnalogValues() {
+            fetch('/analog_values')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('analog0').innerText = data.analog0.toFixed(4);
+                    document.getElementById('analog1').innerText = data.analog1.toFixed(4);
+                    document.getElementById('analog2').innerText = data.analog2.toFixed(4);
+                    document.getElementById('analog3').innerText = data.analog3.toFixed(4);
+                });
+        }
+    
+        setInterval(updateAnalogValues, 1000);  // Update every second
+    </script>
+    
+</body>
+</html>
