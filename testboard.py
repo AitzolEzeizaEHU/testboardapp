@@ -38,11 +38,11 @@ input_pins = {}
 def initialize_hardware():
     global adc, keypad, output_pins, input_pins
 
-    try:
-        disable_spi()
-        time.sleep(1)
-    except Exception as exc:
-        logger.warning("SPI disable step failed: %s", exc)
+#    try:
+#        disable_spi()
+#        time.sleep(1)
+#    except Exception as exc:
+#        logger.warning("SPI disable step failed: %s", exc)
 
     try:
         adc = Adafruit_ADS1x15.ADS1115(address=0x48, busnum=1)
